@@ -1,41 +1,28 @@
--- loader.lua
+-- loader.lua (Versão Final de Força Bruta)
 local owner = "burgueralt07-crypto"
 local repo = "realistapapada"
-local branch = "main"
-local baseUrl = "https://raw.githubusercontent.com/" .. owner .. "/" .. repo .. "/" .. branch .. "/"
 
--- Função de Download Inteligente
-local function downloadFile(path)
-    -- Se o arquivo já existe, não baixa de novo
-    if isfile(path) then return true end
-    
-    local url = baseUrl .. path
-    local success, content = pcall(function() return game:HttpGet(url) end)
-    
-    if success and content ~= "404: Not Found" and content ~= "" then
-        -- Garante que a pasta pai exista antes de escrever
-        local folder = path:match("(.+)/")
-        if folder and not isfolder(folder) then makefolder(folder) end
-        
-        writefile(path, content)
-        print("[RealistaPapada] Baixado sob demanda: " .. path)
-        return true
-    else
-        warn("[RealistaPapada] Falha ao baixar: " .. path)
-        return false
+-- Função para baixar arquivos críticos
+local function forceDownload(path)
+    local url = "https://raw.githubusercontent.com/"..owner.."/"..repo.."/main/"..path
+    local suc, res = pcall(function() return game:HttpGet(url) end)
+    if suc and res ~= "404: Not Found" then
+        if path:find("/") then
+            local dir = path:match("(.*)/")
+            if not isfolder(dir) then makefolder(dir) end
+        end
+        writefile(path, res)
     end
 end
 
--- Hook para interceptar o 'readfile' original do Vape
-local oldReadfile = readfile
-getgenv().readfile = function(path)
-    downloadFile(path) -- Tenta baixar se não existir
-    return oldReadfile(path)
-end
+-- Lista de pastas do Vape
+local folders = {"newvape", "newvape/games", "newvape/profiles", "newvape/assets", "newvape/libraries", "newvape/guis"}
+for _, f in pairs(folders) do if not isfolder(f) then makefolder(f) end end
 
--- Iniciar carregamento
-if downloadFile("newvape/main.lua") then
-    loadstring(readfile("newvape/main.lua"))()
-else
-    error("Erro crítico: Não foi possível baixar o main.lua do seu repositório.")
-end
+-- Lista de arquivos que você sabe que existem no seu GitHub
+-- Se você subiu a pasta newvape, você precisa garantir que o loader baixe o main
+forceDownload("newvape/main.lua")
+
+-- Se o main.lua rodar, ele vai tentar carregar o resto. 
+-- SE ELE DER ERRO EM OUTRO ARQUIVO, VOCÊ TEM QUE ADICIONAR O FORCE DOWNLOAD DESSE ARQUIVO AQUI EM CIMA.
+loadstring(readfile("newvape/main.lua"))()
