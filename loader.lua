@@ -1,28 +1,35 @@
--- loader.lua (Versão Final de Força Bruta)
+-- loader.lua
 local owner = "burgueralt07-crypto"
 local repo = "realistapapada"
+local baseUrl = "https://raw.githubusercontent.com/"..owner.."/"..repo.."/main/"
 
--- Função para baixar arquivos críticos
-local function forceDownload(path)
-    local url = "https://raw.githubusercontent.com/"..owner.."/"..repo.."/main/"..path
+local function downloadFile(path)
+    -- Se o arquivo já existe no PC, não faz nada
+    if isfile(path) then return end
+    
+    local url = baseUrl .. path
     local suc, res = pcall(function() return game:HttpGet(url) end)
-    if suc and res ~= "404: Not Found" then
-        if path:find("/") then
-            local dir = path:match("(.*)/")
-            if not isfolder(dir) then makefolder(dir) end
-        end
+    
+    -- Se o download funcionou e não deu 404, salva o arquivo
+    if suc and res ~= "404: Not Found" and res ~= "400: Invalid request" and #res > 0 then
+        -- Cria a pasta se necessário
+        local dir = path:match("(.*)/")
+        if dir and not isfolder(dir) then makefolder(dir) end
         writefile(path, res)
+        print("[RealistaPapada] Baixado: " .. path)
+    else
+        -- AQUI ESTÁ O SEGREDO: Em vez de dar 'error()', damos um 'warn'
+        -- Isso faz o Vape continuar tentando carregar em vez de travar tudo.
+        warn("[RealistaPapada] Arquivo ignorado ou não encontrado: " .. path)
     end
 end
 
--- Lista de pastas do Vape
-local folders = {"newvape", "newvape/games", "newvape/profiles", "newvape/assets", "newvape/libraries", "newvape/guis"}
-for _, f in pairs(folders) do if not isfolder(f) then makefolder(f) end end
+-- Tenta baixar o essencial
+downloadFile("newvape/main.lua")
 
--- Lista de arquivos que você sabe que existem no seu GitHub
--- Se você subiu a pasta newvape, você precisa garantir que o loader baixe o main
-forceDownload("newvape/main.lua")
-
--- Se o main.lua rodar, ele vai tentar carregar o resto. 
--- SE ELE DER ERRO EM OUTRO ARQUIVO, VOCÊ TEM QUE ADICIONAR O FORCE DOWNLOAD DESSE ARQUIVO AQUI EM CIMA.
-loadstring(readfile("newvape/main.lua"))()
+-- Se o main.lua não existir, ele vai parar aqui, mas não vai travar com erro de 'downloadFile'
+if isfile("newvape/main.lua") then
+    loadstring(readfile("newvape/main.lua"))()
+else
+    warn("Erro: newvape/main.lua não encontrado!")
+end
