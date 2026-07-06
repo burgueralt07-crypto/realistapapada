@@ -1,35 +1,27 @@
--- loader.lua
-local owner = "burgueralt07-crypto"
-local repo = "realistapapada"
-local baseUrl = "https://raw.githubusercontent.com/"..owner.."/"..repo.."/main/"
+-- loader.lua (Hack de bypass)
 
--- 1. Cria a estrutura de pastas necessária
-local folders = {"newvape", "newvape/games", "newvape/profiles", "newvape/assets", "newvape/libraries", "newvape/guis"}
-for _, f in pairs(folders) do if not isfolder(f) then makefolder(f) end end
-
--- 2. "Sequestra" a função de download do Vape antes dele rodar
-getgenv().downloadFile = function(path, func)
+-- 1. Cria uma função de leitura que não quebra se o arquivo não existir
+local oldReadfile = readfile
+getgenv().readfile = function(path)
     if not isfile(path) then
-        local url = baseUrl .. path
-        local suc, res = pcall(function() return game:HttpGet(url) end)
-        if suc and res ~= "404: Not Found" and #res > 0 then
-            writefile(path, res)
-        else
-            warn("Falha ao baixar: " .. path)
-            return nil
-        end
+        warn("Arquivo não encontrado, mas ignorando erro para evitar crash: " .. path)
+        return "" -- Retorna vazio em vez de dar erro, permitindo que o script siga
     end
-    return (func or readfile)(path)
+    return oldReadfile(path)
 end
 
--- 3. Baixa o main manualmente para garantir
-local mainUrl = baseUrl .. "newvape/main.lua"
-local suc, res = pcall(function() return game:HttpGet(mainUrl) end)
-
-if suc then
-    writefile("newvape/main.lua", res)
-    -- 4. Carrega o script
-    loadstring(res)()
+-- 2. Carrega o seu main.lua local (que você já tem na pasta)
+if isfile("newvape/main.lua") then
+    print("[RealistaPapada] Iniciando a partir do disco local...")
+    loadstring(readfile("newvape/main.lua"))()
 else
-    error("Não consegui nem baixar o main.lua. Verifique se o arquivo existe no GitHub!")
+    -- Se nem o main.lua existir, aí sim tentamos baixar da web
+    local url = "https://raw.githubusercontent.com/burgueralt07-crypto/realistapapada/main/newvape/main.lua"
+    local suc, res = pcall(function() return game:HttpGet(url) end)
+    if suc and res ~= "404: Not Found" then
+        writefile("newvape/main.lua", res)
+        loadstring(res)()
+    else
+        error("Erro fatal: O arquivo newvape/main.lua não existe nem localmente nem no GitHub.")
+    end
 end
