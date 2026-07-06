@@ -4,38 +4,38 @@ local repo = "realistapapada"
 local branch = "main"
 local baseUrl = "https://raw.githubusercontent.com/" .. owner .. "/" .. repo .. "/" .. branch .. "/"
 
--- Lista de pastas obrigatórias
-local folders = {"newvape", "newvape/games", "newvape/profiles", "newvape/assets", "newvape/libraries", "newvape/guis"}
-
--- Função de Download Robusta
+-- Função de Download Inteligente
 local function downloadFile(path)
+    -- Se o arquivo já existe, não baixa de novo
+    if isfile(path) then return true end
+    
     local url = baseUrl .. path
     local success, content = pcall(function() return game:HttpGet(url) end)
     
     if success and content ~= "404: Not Found" and content ~= "" then
+        -- Garante que a pasta pai exista antes de escrever
+        local folder = path:match("(.+)/")
+        if folder and not isfolder(folder) then makefolder(folder) end
+        
         writefile(path, content)
-        print("[RealistaPapada] Baixado com sucesso: " .. path)
+        print("[RealistaPapada] Baixado sob demanda: " .. path)
+        return true
     else
         warn("[RealistaPapada] Falha ao baixar: " .. path)
+        return false
     end
 end
 
--- 1. Cria as pastas
-for _, folder in pairs(folders) do
-    if not isfolder(folder) then makefolder(folder) end
+-- Hook para interceptar o 'readfile' original do Vape
+local oldReadfile = readfile
+getgenv().readfile = function(path)
+    downloadFile(path) -- Tenta baixar se não existir
+    return oldReadfile(path)
 end
 
--- 2. Baixa o Main e as Bibliotecas Essenciais
--- Se o erro persistir, adicione aqui outros arquivos que aparecem no erro do F9
-local filesToDownload = {"newvape/main.lua", "newvape/libraries/lib.lua"} 
-
-for _, file in pairs(filesToDownload) do
-    if not isfile(file) then downloadFile(file) end
-end
-
--- 3. Executa
-if isfile("newvape/main.lua") then
+-- Iniciar carregamento
+if downloadFile("newvape/main.lua") then
     loadstring(readfile("newvape/main.lua"))()
 else
-    error("Erro: newvape/main.lua não encontrado após tentativa de download.")
+    error("Erro crítico: Não foi possível baixar o main.lua do seu repositório.")
 end
