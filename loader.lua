@@ -1,45 +1,41 @@
--- Configuração do Repositório
+-- loader.lua
 local owner = "burgueralt07-crypto"
 local repo = "realistapapada"
 local branch = "main"
 local baseUrl = "https://raw.githubusercontent.com/" .. owner .. "/" .. repo .. "/" .. branch .. "/"
 
--- Lista de pastas e arquivos essenciais
+-- Lista de pastas obrigatórias
 local folders = {"newvape", "newvape/games", "newvape/profiles", "newvape/assets", "newvape/libraries", "newvape/guis"}
-local essentialFiles = {"newvape/main.lua"} -- Adicione outros aqui se necessário
 
--- Função de Download
+-- Função de Download Robusta
 local function downloadFile(path)
     local url = baseUrl .. path
-    local suc, res = pcall(function() return game:HttpGet(url) end)
-    if suc and res ~= "404: Not Found" and res ~= "" then
-        writefile(path, res)
-        return true
+    local success, content = pcall(function() return game:HttpGet(url) end)
+    
+    if success and content ~= "404: Not Found" and content ~= "" then
+        writefile(path, content)
+        print("[RealistaPapada] Baixado com sucesso: " .. path)
     else
-        warn("Erro ao baixar: " .. path)
-        return false
+        warn("[RealistaPapada] Falha ao baixar: " .. path)
     end
 end
 
--- Inicialização da Estrutura
+-- 1. Cria as pastas
 for _, folder in pairs(folders) do
-    if not isfolder(folder) then
-        makefolder(folder)
-    end
+    if not isfolder(folder) then makefolder(folder) end
 end
 
--- Garantir que os arquivos essenciais existam
-for _, file in pairs(essentialFiles) do
-    if not isfile(file) then
-        print("[RealistaPapada] Baixando: " .. file)
-        downloadFile(file)
-    end
+-- 2. Baixa o Main e as Bibliotecas Essenciais
+-- Se o erro persistir, adicione aqui outros arquivos que aparecem no erro do F9
+local filesToDownload = {"newvape/main.lua", "newvape/libraries/lib.lua"} 
+
+for _, file in pairs(filesToDownload) do
+    if not isfile(file) then downloadFile(file) end
 end
 
--- Carregamento Final
+-- 3. Executa
 if isfile("newvape/main.lua") then
-    print("[RealistaPapada] Iniciando...")
     loadstring(readfile("newvape/main.lua"))()
 else
-    error("Erro crítico: newvape/main.lua não foi encontrado.")
+    error("Erro: newvape/main.lua não encontrado após tentativa de download.")
 end
